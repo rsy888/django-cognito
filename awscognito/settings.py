@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/1.10/ref/settings/
 """
 
 import os
-from .local_settings import *
+#from .local_settings import *
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -39,7 +39,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'backend',
-    'frontend',
 ]
 
 MIDDLEWARE = [
@@ -57,7 +56,7 @@ ROOT_URLCONF = 'awscognito.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': ['/home/delhivery/delhivery_code/aws_cogito/awscognito/templates',
+        'DIRS': ['/Users/Owner/cognito/django-aws-cognito/templates',
                  ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -123,18 +122,35 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.9/howto/static-files/
 LOCAL_STATICFILES_DIRS = (
-    #os.path.join(BASE_DIR, "static"),
-    "/home/delhivery/delhivery_code/aws_cogito/awscognito/staticfiles",
+    os.path.join(BASE_DIR, "static"),
+    "/Users/Owner/cognito/django-aws-cognito/staticfiles",
+    #"/home/delhivery/delhivery_code/aws_cogito/awscognito/staticfiles",
 )
 STATICFILES_DIRS = LOCAL_STATICFILES_DIRS
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+#STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 
+#local settings
+#AWS COGNITO CREDENTIALS
 
+IDENTITYPOOLID = 'us-east-2:f005b5ad-a584-4f62-bdbe-4937229892f9'
 
+ACCOUNTID = '567931695461'
 
+AWS_ACCESS_KEY = 'AKIAYIO256FSWLO5VG7B'
 
+AWS_SECRET_KEY = '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'
 
+DEFAULT_REGION_NAME = 'us-east-2'
 
+DEFAULT_USER_POOL_ID = 'us-east-2_tDGtimgqO'
+
+DEFAULT_USER_POOL_APP_ID = '7ffmhhfmp4etes3ml1m0sqfsn0' #APP should not have any secret in AWS
+
+DEFAULT_CONFIG = {'region_name':DEFAULT_REGION_NAME, 'aws_access_key_id':AWS_ACCESS_KEY, 'aws_secret_access_key':AWS_SECRET_KEY}
+
+DEFAULT_USER_POOL_LOGIN_PROVIDER = 'cognito-idp.%s.amazonaws.com/%s' % (DEFAULT_REGION_NAME, DEFAULT_USER_POOL_ID)
+
+ACCESS_TOKEN=''
 
