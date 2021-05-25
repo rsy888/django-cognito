@@ -6,4 +6,4 @@ local_settings*
 *.log
 build/
 *.*~
-
+secret.json
