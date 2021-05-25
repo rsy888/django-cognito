@@ -4,6 +4,7 @@ import json
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.decorators import api_view
 from awscognito import settings
 from rest_framework import exceptions
 from django.http import HttpResponse
@@ -13,7 +14,7 @@ from .models import User
 
 # 회원가입요청
 class SignUp(APIView):
-    def post(self, request, *ars, **kwargs):
+    def post(self, request):
         try:
             idp_client = boto3.client('cognito-idp', **settings.DEFAULT_CONFIG)
 
@@ -27,31 +28,39 @@ class SignUp(APIView):
             if(request.data['user_email']==''):
                 return HttpResponse("이메일을 입력해주세요")
 
-            serializers=UserSerializer(data=request.data)
-            if serializers.is_valid():
-                serializers.save()
-            return Response(serializers.data,content_type="application/json",status=status.HTTP_201_CREATED)
-
+        # 이미 존재하는 Id
         except idp_client.exceptions.UsernameExistsException:
-            return HttpResponse("이미 존재하는 id입니다.")
+            return Response(serializers.errors, status=status.HTTP_409_BAD_REQUEST)
+        # 비밀번호는 최소 6자리, 특수문자, 대문자, 소문자, 숫자를 포함해야 함
         except idp_client.exceptions.InvalidPasswordException:
-            return HttpResponse("비밀번호는 최소 6자리, 특수문자, 대문자, 소문자, 숫자를 포함해야합니다.")
+            return Response(serializers.errors, status=status.HTTP_400_BAD_REQUEST)
+        # 비밀번호는 최소 6자리, 특수문자, 대문자, 소문자, 숫자를 포함해야 함
         except botocore.exceptions.ParamValidationError:
-            return HttpResponse("비밀번호는 최소 6자리, 특수문자, 대문자, 소문자, 숫자를 포함해야합니다.")
+            return Response(serializers.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # db에 저장
+        serializers=UserSerializer(data=request.data)
+        if serializers.is_valid():
+            serializers.save()
+
+        return Response(serializers.data,status=status.HTTP_201_CREATED)
 
 
 
 # 회원가입 확인
 class ConfirmSignUp(APIView):
-    def post(self, request, *ars, **kwargs):
+    def post(self, request):
         try:
             idp_client = boto3.client('cognito-idp', **settings.DEFAULT_CONFIG)
+
+            # SignUp하고 난 뒤 username이 유효하면 request에 username 필요 없지만 만료될 시 필요
             username=''
             if(settings.USERNAME==''):
                 username=request.data['username']
             else:
                 username=settings.USERNAME
 
+            # code는 이메일로 받은 verification code
             user = idp_client.confirm_sign_up(ClientId=settings.DEFAULT_USER_POOL_APP_ID,
                                     Username=username,
                                     ConfirmationCode=request.data['code']
