@@ -27,7 +27,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'backend',
+    'backend.apps.BackendConfig',
 ]
 
 MIDDLEWARE = [
@@ -107,4 +107,3 @@ LOCAL_STATICFILES_DIRS = (
 )
 STATICFILES_DIRS = LOCAL_STATICFILES_DIRS
 STATIC_URL = '/static/'
-

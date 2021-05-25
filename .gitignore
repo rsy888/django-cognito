@@ -6,3 +6,4 @@ migrations/
 build/
 *.*~
 secret.json
+local_settings.py

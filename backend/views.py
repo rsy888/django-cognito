@@ -1,14 +1,15 @@
-import requests
 import boto3
 import botocore
 import json
-import jwt
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from awscognito import settings
 from rest_framework import exceptions
 from django.http import HttpResponse
+
+from .serializers import *
+from .models import User
 
 # 회원가입요청
 class SignUp(APIView):
@@ -17,17 +18,19 @@ class SignUp(APIView):
             idp_client = boto3.client('cognito-idp', **settings.DEFAULT_CONFIG)
 
             user = idp_client.sign_up(ClientId=settings.DEFAULT_USER_POOL_APP_ID,
-                                    Username=request.data['username'],
-                                    Password=request.data['password'],
-                                    UserAttributes=[{'Name':'email','Value':request.data['email']},]
+                                    Username=request.data['user_id'],
+                                    Password=request.data['user_password'],
+                                    UserAttributes=[{'Name':'email','Value':request.data['user_email']},]
                                     )
 
-            settings.USERNAME=request.data['username']
-            if(request.data['email']==''):
+            settings.USERNAME=request.data['user_id']
+            if(request.data['user_email']==''):
                 return HttpResponse("이메일을 입력해주세요")
 
-            return HttpResponse("이메일로 확인 코드를 전송했습니다.")
-
+            serializers=UserSerializer(data=request.data)
+            if serializers.is_valid():
+                serializers.save()
+            return Response(serializers.data,content_type="application/json",status=status.HTTP_201_CREATED)
 
         except idp_client.exceptions.UsernameExistsException:
             return HttpResponse("이미 존재하는 id입니다.")
@@ -35,8 +38,9 @@ class SignUp(APIView):
             return HttpResponse("비밀번호는 최소 6자리, 특수문자, 대문자, 소문자, 숫자를 포함해야합니다.")
         except botocore.exceptions.ParamValidationError:
             return HttpResponse("비밀번호는 최소 6자리, 특수문자, 대문자, 소문자, 숫자를 포함해야합니다.")
- 
-       
+
+
+
 # 회원가입 확인
 class ConfirmSignUp(APIView):
     def post(self, request, *ars, **kwargs):

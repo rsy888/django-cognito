@@ -1,20 +1,4 @@
 #AWS COGNITO CREDENTIALS
-import os,json
-from django.core.exceptions import ImproperlyConfigured
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-secret_file = os.path.join(BASE_DIR, 'secret.json')
-
-#secret key 가져옴
-with open(secret_file) as f:
-    secret = json.loads(f.read())
-
-def get_secret(setting, secret=secret):
-    try:
-        return secret[setting]
-    except KeyError:
-        error_msg = "Set the {} environment variable".format(setting)
-        raise ImproperlyConfigured(error_msg)
 
 IDENTITYPOOLID = 'us-east-2:5a5986ad-f054-48c7-8337-0396e6fd3496'
 
@@ -22,7 +6,7 @@ ACCOUNTID = '567931695461'
 
 AWS_ACCESS_KEY = 'AKIAYIO256FSWLO5VG7B'
 
-AWS_SECRET_KEY = get_secret("SECRET_KEY")
+AWS_SECRET_KEY = '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'
 
 DEFAULT_REGION_NAME = 'us-east-2'
 
