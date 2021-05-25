@@ -6,7 +6,6 @@ import jwt
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from backend.utils import UserProfileClass
 from awscognito import settings
 from rest_framework import exceptions
 from django.http import HttpResponse
@@ -24,15 +23,20 @@ class SignUp(APIView):
                                     )
 
             settings.USERNAME=request.data['username']
+            if(request.data['email']==''):
+                return HttpResponse("이메일을 입력해주세요")
+
+            return HttpResponse("이메일로 확인 코드를 전송했습니다.")
+
 
         except idp_client.exceptions.UsernameExistsException:
             return HttpResponse("이미 존재하는 id입니다.")
         except idp_client.exceptions.InvalidPasswordException:
-            return HttpResponse("Invalid password")
-        #except botocore.exceptions.ParamValidationError:
-            #return HttpResponse("비밀번호는 최소 6자리입니다.")
-        return Response(data={'user':user}, status=status.HTTP_201_CREATED)
-
+            return HttpResponse("비밀번호는 최소 6자리, 특수문자, 대문자, 소문자, 숫자를 포함해야합니다.")
+        except botocore.exceptions.ParamValidationError:
+            return HttpResponse("비밀번호는 최소 6자리, 특수문자, 대문자, 소문자, 숫자를 포함해야합니다.")
+ 
+       
 # 회원가입 확인
 class ConfirmSignUp(APIView):
     def post(self, request, *ars, **kwargs):
@@ -49,7 +53,7 @@ class ConfirmSignUp(APIView):
                                     ConfirmationCode=request.data['code']
                                     )
 
-            return Response(data={'user':user}, status=status.HTTP_201_CREATED)
+            return HttpResponse("가입이 완료되었습니다.")
 
         except botocore.exceptions.ParamValidationError:
             return HttpResponse("다시 시도해주세요")
