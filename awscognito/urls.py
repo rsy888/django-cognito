@@ -20,7 +20,6 @@ from django.conf import settings
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'^', include('frontend.urls')),
     url(r'^api/', include('backend.urls')),
 ]
 
