@@ -25,12 +25,13 @@ class SignUp(APIView):
                                     )
 
             settings.USERNAME=request.data['user_id']
+            # 이메일 공백일 시
             if(request.data['user_email']==''):
-                return HttpResponse("이메일을 입력해주세요")
+                return Response(serializers.errors, status=status.HTTP_400_BAD_REQUEST)
 
         # 이미 존재하는 Id
         except idp_client.exceptions.UsernameExistsException:
-            return Response(serializers.errors, status=status.HTTP_409_BAD_REQUEST)
+            return Response(serializers.errors, status=status.HTTP_409_CONFLICT)
         # 비밀번호는 최소 6자리, 특수문자, 대문자, 소문자, 숫자를 포함해야 함
         except idp_client.exceptions.InvalidPasswordException:
             return Response(serializers.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -43,6 +44,7 @@ class SignUp(APIView):
         if serializers.is_valid():
             serializers.save()
 
+        # 이메일로 verification 전송됨
         return Response(serializers.data,status=status.HTTP_201_CREATED)
 
 
@@ -66,50 +68,34 @@ class ConfirmSignUp(APIView):
                                     ConfirmationCode=request.data['code']
                                     )
 
-            return HttpResponse("가입이 완료되었습니다.")
+            return Response(status=status.HTTP_201_CREATED)
 
-        except botocore.exceptions.ParamValidationError:
-            return HttpResponse("다시 시도해주세요")
+        # 만료된 코드
         except idp_client.exceptions.ExpiredCodeException:
-            return HttpResponse("유효하지 않은 코드입니다.")
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        # 올바르지 않은 코드
         except idp_client.exceptions.CodeMismatchException:
-            return HttpResponse("올바르지 않은 코드입니다.")
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
-'''
-# 이메일 확인
-class ConfirmEmail(APIView):
-    def post(self, request, *ars, **kwargs):
-        try:
-            idp_client = boto3.client('cognito-idp', **settings.DEFAULT_CONFIG)
-
-            user = idp_client.verify_user_attribute(AccessToken=settings.ACCESS_TOKEN,
-                                    AttributeName='email',
-                                    Code=request.data['code']
-                                    )
-
-            return HttpResponse("이메일이 전송되었습니다.")
-        
-        except idp_client.exceptions.InvalidParameterException:
-            return HttpResponse("로그인이 필요합니다.")
-        except idp_client.exceptions.ExpiredCodeException:
-            return HttpResponse("유효하지 않은 코드입니다.")
-        except idp_client.exceptions.CodeMismatchException:
-            return HttpResponse("올바르지 않은 코드입니다.")
-'''
 
 # 회원가입 확인 코드 재발급
 class GetEmailVerification(APIView):
-    def get(self, request, *ars, **kwargs):
-        try:
-            idp_client = boto3.client('cognito-idp', **settings.DEFAULT_CONFIG)
+    def post(self, request):
+        idp_client = boto3.client('cognito-idp', **settings.DEFAULT_CONFIG)
 
-            user = idp_client.confirm_sign_up(ClientId=settings.DEFAULT_USER_POOL_APP_ID,
+        # SignUp하고 난 뒤 username이 유효하면 request에 username 필요 없지만 만료될 시 필요
+        username=''
+        if(settings.USERNAME==''):
+            username=request.data['username']
+        else:
+            username=settings.USERNAME
+
+        user = idp_client.resend_confirmation_code(ClientId=settings.DEFAULT_USER_POOL_APP_ID,
                                     Username=username
                                     )
 
-            return HttpResponse('%s로 이메일을 보냈습니다'%user['CodeDeliveryDetails']['Destination'])
-        except idp_client.exceptions.NotAuthorizedException:
-            return HttpResponse("asdf")        
+        # 지정한 이메일로 verification code 전송 (user['CodeDeliveryDetails']['Destination'])
+        return Response(status=status.HTTP_201_CREATED)
 
 
 # 로그아웃
@@ -120,10 +106,11 @@ class SignOut(APIView):
 
             user=idp_client.global_sign_out(AccessToken=settings.ACCESS_TOKEN)
 
-            return HttpResponse("로그아웃 되었습니다.")
-        except idp_client.exceptions.NotAuthorizedException:
-            return HttpResponse("로그아웃 상태입니다.")
+            return Response(status=status.HTTP_200_OK)
 
+        # 로그인 상태가 아닐 시
+        except idp_client.exceptions.NotAuthorizedException:
+            return Response(status=status.HTTP_404_NOT_FOUND)
         
 # 로그인
 class AdminInitiateAuth(APIView):
@@ -149,26 +136,11 @@ class AdminInitiateAuth(APIView):
                                     )
             return Response(data={'user':user,
                                 'res':res}, status=status.HTTP_201_CREATED)
+        # 아이디 혹은 비밀번호가 일치하지 않음
         except idp_client.exceptions.NotAuthorizedException:
-            return HttpResponse("아이디 또는 비밀번호가 일치하지 않습니다.")
+            return Response(status=status.HTTP_400_BAD_REQUEST)
         
-'''    
-class PublicProviderLogin(APIView):
-    def post(self, request, *args, **kwargs):
-        token = request.data['token']
-        provider = request.data['provider']
-        ci_client = boto3.client('cognito-identity', **settings.DEFAULT_CONFIG)
-        # check the user if it exists in USER POOL
-        
-        # get identity id
-        res = ci_client.get_id(AccountId=settings.ACCOUNTID,
-                                IdentityPoolId=settings.IDENTITYPOOLID,
-                                Logins={
-                                        provider:token
-                                        }
-                                )
-        return Response(data={'res':res}, status=status.HTTP_201_CREATED)
-'''
+
 
 # 비밀번호 변경        
 class ChangePassword(APIView):
@@ -180,17 +152,23 @@ class ChangePassword(APIView):
                                     AccessToken=settings.ACCESS_TOKEN
                                     )
             
-            return Response(data={'user':user}, status=status.HTTP_201_CREATED)
+            return Response(status=status.HTTP_201_CREATED)
+        
+        # 현재 비밀번호가 일치하지 않음
         except idp_client.exceptions.NotAuthorizedException:
-            return HttpResponse("현재 비밀번호가 일치하지 않습니다.")
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        # 비밀번호는 최소 6자리, 특수문자, 대문자, 소문자, 숫자를 포함해야 함
         except idp_client.exceptions.InvalidPasswordException:
-            return HttpResponse("Invalid password")
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        # 비밀번호는 최소 6자리, 특수문자, 대문자, 소문자, 숫자를 포함해야 함
         except botocore.exceptions.ParamValidationError:
-            return HttpResponse("비밀번호는 최소 6자리입니다.")
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        # 횟수 초과
         except idp_client.exceptions.LimitExceededException:
-            return HttpResponse("횟수 초과")
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        # 유효하지 않은 ACCESSTOKEN 로그인 필요
         except idp_client.exceptions.InvalidParameterException:
-            return HttpResponse("로그인이 필요합니다.")
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
 
 
 # 비밀번호 잊어버렸을 때        

@@ -10,6 +10,6 @@ urlpatterns = [
     path('change_password/', views.ChangePassword.as_view()),
     path('forgot_password/', views.ForgotPassword.as_view()),
     path('confirm_forgot_password/',views.ConfirmForgotPassword().as_view()),
-    path('retrieve_info/', views.RetrieveInfo.as_view()),
+    #path('retrieve_info/', views.RetrieveInfo.as_view()),
     path('delete_user/', views.DeleteUser.as_view())
 ]
